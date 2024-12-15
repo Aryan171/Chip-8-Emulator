@@ -30,9 +30,9 @@ struct Emulator {
 	 
 	/*delay time register and sound time register,
 	both these registers are decremented at 60Hz*/
-	uint16_t DT, ST;
+	uint16_t DT{}, ST{};
 
-	uint16_t I;
+	uint16_t I{};
 
 	uint8_t** display;
 
@@ -71,7 +71,6 @@ struct Emulator {
 				// 0nnn is ignored 
 
 				// 00E0 - CLS
-				// Clear the display.
 				if (b == hx0 && c == hxE && d == hx0) {
 					for (int i = 0; i < displayX; ++i) {
 						for (int j = 0; j < displayY; ++j) {
@@ -83,10 +82,6 @@ struct Emulator {
 				}
 
 				// 00EE - RET
-				// Return from a subroutine.
-				// The interpreter sets the program counter to the address at the
-				// top of the stack, then subtracts 1 from the stack pointer.
-
 				else if (b == hx0 && c == hxE && d == hxE) {
 					PC = stack[SP];
 					SP--;
@@ -96,19 +91,12 @@ struct Emulator {
 
 			case hx1:
 				// 1nnn - JP addr
-				// Jump to location nnn.
-				// The interpreter sets the program counter to nnn.
-
 				PC = getLastThreeNibbles(ins);
 
 				break;
 
 			case hx2:
 				// 2nnn - CALL addr
-				// Call subroutine at nnn.
-				// The interpreter increments the stack pointer, then puts the 
-				// current PC on the top of the stack.The PC is then set to nnn.
-
 				SP++;
 				stack[SP] = PC;
 
@@ -118,10 +106,6 @@ struct Emulator {
 
 			case hx3:
 				// 3xkk - SE Vx, byte
-				// Skip next instruction if Vx = kk.
-				// The interpreter compares register Vx to kk, and if they are 
-				// equal, increments the program counter by 2.
-
 				if (V[b] == getLastTwoNibbles(ins)) {
 					// we increment by 4 instead of 2 as one instruction is two 
 					// bytes long
@@ -132,10 +116,6 @@ struct Emulator {
 
 			case hx4:
 				// 4xkk - SNE Vx, byte
-				// Skip next instruction if Vx != kk.
-				// The interpreter compares register Vx to kk, and if they are 
-				// not equal, increments the program counter by 2.
-
 				if (V[b] != getLastTwoNibbles(ins)) {
 					// we increment by 4 instead of 2 as one instruction is two 
 					// bytes long
@@ -146,10 +126,6 @@ struct Emulator {
 
 			case hx5:
 				// 5xy0 - SE Vx, Vy
-				// Skip next instruction if Vx = Vy.
-				// The interpreter compares register Vx to register Vy, and if 
-				// they are equal, increments the program counter by 2.
-
 				if (d == hx0 && V[b] == V[c]) {
 					// we increment by 4 instead of 2 as one instruction is two 
 					// bytes long
@@ -160,9 +136,6 @@ struct Emulator {
 
 			case hx6:
 				// 6xkk - LD Vx, byte
-				// Set Vx = kk.
-				// The interpreter puts the value kk into register Vx.
-
 				V[b] = getLastTwoNibbles(ins);
 
 				PC += 2;
@@ -171,16 +144,117 @@ struct Emulator {
 
 			case hx7:
 				// 7xkk - ADD Vx, byte
-				// Set Vx = Vx + kk.
-				// Adds the value kk to the value of register Vx, then 
-				// stores the result in Vx.
-
 				V[b] += getLastTwoNibbles(ins);
 
 				PC += 2;
 
 				break;
 
+			case hx8:
+				switch (d) {
+				case hx0:
+					V[b] = V[c];
+					break;
+					
+				case hx1:
+					V[b] |= V[c];
+					break;
+
+				case hx2:
+					V[b] &= V[c];
+					break;
+
+				case hx3:
+					V[b] ^= V[c];
+					break;
+
+				case hx4:
+					uint16_t sum = static_cast<uint16_t>(V[b]) + static_cast<uint16_t>(V[c]);
+
+					if ((sum & 0xFFFF0000) == 0) {
+						V[15] = 0;
+					}
+					else {
+						V[15] = 1;
+					}
+
+					V[b] = static_cast<uint8_t>(sum & 0x0000FFFF);
+
+					break;
+
+				case hx5:
+					if (V[b] >= V[c]) {
+						V[15] = 1;
+					}
+					else {
+						V[15] = 0;
+					}
+
+					V[b] -= V[c];
+
+					break;
+
+				case hx6:
+					if ((V[b] & 0x0001) == 1) {
+						V[15] = 1;
+					}
+					else {
+						V[15] = 0;
+					}
+
+					// ik the compiler optimizes division like this but still ...
+					V[b] >>= 1;
+
+					break;
+
+				case hx7:
+					if (V[b] >= V[c]) {
+						V[15] = 0;
+					}
+					else {
+						V[15] = 1;
+					}
+
+					V[b] = V[c] - V[b];
+
+					break;
+
+				case hxE:
+					if ((V[b] & 0x0001) == 1) {
+						V[15] = 1;
+					}
+					else {
+						V[15] = 0;
+					}
+
+					// ik the compiler optimizes division like this but still ...
+					V[b] <<= 1;
+
+					break;
+				}
+
+				PC += 2;
+
+				break;
+
+			case hx9:
+				// 9xy0 - SNE Vx, Vy
+				if (d == 0) {
+					if (V[b] != V[c]) {
+						PC += 4;
+					}
+					else {
+						PC += 2;
+					}
+				}
+
+				break;
+
+			case hxA:
+				// Annn - LD I, addr
+				I = getLastThreeNibbles(ins);
+
+				break;
 			}
 		}
 	}
