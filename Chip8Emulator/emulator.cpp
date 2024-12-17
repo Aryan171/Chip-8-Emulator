@@ -14,12 +14,12 @@ struct Emulator {
 		hx7 = 0x007,
 		hx8 = 0x008,
 		hx9 = 0x009,
-		hxA = 0x010,
-		hxB = 0x011,
-		hxC = 0x012,
-		hxD = 0x013,
-		hxE = 0x014,
-		hxF = 0x015;
+		hxA = 0x00A,
+		hxB = 0x00B,
+		hxC = 0x00C,
+		hxD = 0x00D,
+		hxE = 0x00E,
+		hxF = 0x00F;
 
 	/*program counter and stack pointer registers 
 	program counter is set to 512 as most chip 8 
@@ -36,6 +36,9 @@ struct Emulator {
 
 	uint8_t** display;
 
+	// 1 means pressed 0 means not pressed
+	uint8_t* keyboard;
+
 	int displayX = 64, displayY = 32;
 
 	Emulator() {
@@ -48,6 +51,9 @@ struct Emulator {
 		// allocating memory for the display
 		display = new uint8_t*[displayX];
 
+		// allocating memory for the keyboard keys
+		keyboard = new uint8_t[16];
+
 		for (int i = 0; i < displayX; ++i) {
 			display[i] = new uint8_t[displayY];
 		}
@@ -58,13 +64,14 @@ struct Emulator {
 
 	void startEmulator() {
 		while (true) {
-			uint16_t ins = getInstruction(memory[PC], memory[PC + 1]);
+			// forming the 16 bit instruction from two 8 bit numbers
+			uint16_t ins = (static_cast<uint16_t>(memory[PC]) << 8) | memory[PC + 1];
 
 			// finding the four nibbles of the instruction
-			uint16_t a = getFirstNibble(ins),
-				b = getSecondNibble(ins),
-				c = getThirdNibble(ins),
-				d = getFourthNibble(ins);
+			uint16_t a = ins >> 12,
+				b = (ins & 0x0F00) >> 8,
+				c = (ins & 0x00F0) >> 4,
+				d = ins & 0x000F;
 
 			switch (a) {
 			case hx0:
@@ -308,31 +315,76 @@ struct Emulator {
 					}
 				}
 
+				PC += 2;
+
 				break;
 
-			
+			case hxE:
+				// Ex9E - SKP Vx
+
+				if (c == hx9 && d == hxE && keyboard[V[b]] == 1) {
+					PC += 4;
+				}
+				else if (c == hxA && d == hx1 && keyboard[V[b]] == 0) {
+					PC += 4;
+				}
+
+				break;
+
+			case hxF:
+				switch (getLastTwoNibbles(ins)) {
+				case 0x07:
+					// Fx07 - LD Vx, DT
+
+					V[b] = DT;
+					break;
+
+				case 0x0A:
+					while(true) {
+						if (true) { // check for a new keypress here ***************
+							V[b] = 0; // new key value here *************
+							break;
+						}
+					}
+					break;
+
+				case 0x15:
+					DT = V[b];
+					break;
+
+				case 0x18:
+					ST = V[b];
+					break;
+
+				case 0x1E:
+					I += V[b];
+					break;
+
+				case 0x29:
+					I = 5 * V[b];
+					break;
+
+				case 0x33:
+					memory[I] = V[b] / 100;
+					memory[I + 1] = (V[b] % 100) / 10;
+					memory[I + 2] = V[b] % 10;
+					break;
+
+				case 0x55:
+					for (int i = 0; i <= b; ++i) {
+						memory[I + i] = V[i];
+					}
+					break;
+
+				case 0x65:
+					for (int i = 0; i <= b; ++i) {
+						V[i] = memory[I + i];
+					}
+					break;
+				}
+				PC += 2;
 			}
 		}
-	}
-
-	inline uint16_t getFirstNibble(uint16_t instruction) {
-		return instruction >> 12;
-	}
-
-	inline uint16_t getSecondNibble(uint16_t instruction) {
-		return (instruction & 0x0FFF) >> 12;
-	}
-
-	inline uint16_t getThirdNibble(uint16_t instruction) {
-		return (instruction & 0x00FF) >> 12;
-	}
-
-	inline uint16_t getFourthNibble(uint16_t instruction) {
-		return (instruction & 0x000F) >> 12;
-	}
-
-	inline uint16_t getInstruction(uint8_t a, uint8_t b) {
-		return static_cast<uint16_t>(a) | b;
 	}
 
 	inline uint16_t getLastThreeNibbles(uint16_t instruction) {
