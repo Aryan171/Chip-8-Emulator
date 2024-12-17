@@ -253,8 +253,64 @@ struct Emulator {
 			case hxA:
 				// Annn - LD I, addr
 				I = getLastThreeNibbles(ins);
+				PC += 2;
 
 				break;
+
+			case hxB:
+				// Bnnn - JP V0, addr
+				PC = getLastThreeNibbles(ins) + V[0];
+
+				break;
+
+			case hxC:
+				// Cxkk - RND Vx, byte
+				V[b] = getLastTwoNibbles(ins) & 1;// replace 1 with random number**********************************
+
+				PC += 2;
+
+				break;
+
+			case hxD:
+				// Dxyn - DRW Vx, Vy, nibble
+
+				V[15] = 0;
+
+				// looping through all the bytes that store the sprite
+				for (uint16_t i = I; i < I + d; ++i) {
+					// temporary variable used to disylay the byte
+					uint8_t t = 0x01;
+
+					// used to store the final state of the pixel
+					uint8_t a;
+
+					// displaying one byte of the sprite
+					for (uint16_t b = 0; b < 8; ++i) {
+						if ((memory[i] & t) != 0) {
+							if (display[b][c] == 1) {
+								a = 0;
+								V[15] = 1;
+							}
+							else {
+								a = 1;
+							}
+						}
+						else {
+							if (display[b][c] == 1) {
+								a = 1;
+							}
+							else {
+								a = 0;
+							}
+						}
+						t << 1;
+						display[b % displayX][c % displayY] = a;
+					}
+				}
+
+				break;
+
+			
 			}
 		}
 	}
