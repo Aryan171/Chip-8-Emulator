@@ -1,9 +1,9 @@
 #include "chip8IO.h"
     
-Chip8IO::Chip8IO(uint8_t ** display, uint8_t* keyboard, void (*func)(uint8_t key)) :
+Chip8IO::Chip8IO(uint8_t ** display, uint8_t* keyboard, std::function<void(uint8_t)> func) :
         display(display), keyboard(keyboard), func(func) {}
 
-void (*func)(uint8_t key);
+std::function<void(uint8_t)> func;
 
 uint8_t** display;
 uint8_t* keyboard;

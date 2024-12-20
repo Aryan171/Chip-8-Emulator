@@ -3,6 +3,7 @@
 #include <iostream>
 #include <random>
 #include <thread>
+#include <functional>
 
 class Emulator {
 public:
@@ -46,11 +47,8 @@ public:
 
 	int displayX = 64, displayY = 32;
 
-	Emulator() {}
-
-	void startEmulator() {}
-
-	inline uint16_t getLastThreeNibbles(uint16_t instruction) {}
-
-	inline uint8_t getLastTwoNibbles(uint16_t instruction) {}
+	Emulator();
+	void startEmulator();
+	inline uint16_t getLastThreeNibbles(uint16_t instruction);
+	inline uint8_t getLastTwoNibbles(uint16_t instruction);
 };

@@ -5,6 +5,10 @@ Emulator::Emulator() {
 	// allocating 4kb of memory for the program to run
 	memory = new uint8_t[4096];
 
+	for (int i = 0; i < 4096; ++i) {
+		memory[i] = 0;
+	}
+
 	// allocating memory for the V
 	V = new uint8_t[16];
 
@@ -27,9 +31,9 @@ void Emulator::startEmulator() {
 	uint8_t newKeyCode;
 
 	auto func = [&](uint8_t key) {
-		newKeyCode = key;
 		newKeyPressed = true;
-	};
+		newKeyCode = key;
+		};
 
 	Chip8IO io(display, keyboard, func);
 
@@ -139,7 +143,7 @@ void Emulator::startEmulator() {
 			case hx0:
 				V[b] = V[c];
 				break;
-					
+
 			case hx1:
 				V[b] |= V[c];
 				break;
@@ -152,7 +156,7 @@ void Emulator::startEmulator() {
 				V[b] ^= V[c];
 				break;
 
-			case hx4:
+			case hx4: {
 				uint16_t sum = static_cast<uint16_t>(V[b]) + static_cast<uint16_t>(V[c]);
 
 				if ((sum & 0xFFFF0000) == 0) {
@@ -163,7 +167,7 @@ void Emulator::startEmulator() {
 				}
 
 				V[b] = static_cast<uint8_t>(sum & 0x0000FFFF);
-
+			}
 				break;
 
 			case hx5:
@@ -247,7 +251,7 @@ void Emulator::startEmulator() {
 
 			break;
 
-		case hxC:
+		case hxC: {
 			// Cxkk - RND Vx, byte
 
 			std::random_device rd;
@@ -259,8 +263,9 @@ void Emulator::startEmulator() {
 			PC += 2;
 
 			break;
+		}
 
-		case hxD:
+		case hxD: {
 			// Dxyn - DRW Vx, Vy, nibble
 
 			V[15] = 0;
@@ -298,8 +303,8 @@ void Emulator::startEmulator() {
 			}
 
 			PC += 2;
-
 			break;
+		}
 
 		case hxE:
 			// Ex9E - SKP Vx

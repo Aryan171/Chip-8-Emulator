@@ -2,6 +2,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <unordered_map>
+#include <functional>
 
 class Chip8IO {
 public:
@@ -9,9 +10,9 @@ public:
     all the buttons that are pressed are made = 1 in the 1d keyboard array,
     whenever a new key is pressed func function is called with the keycode of the
     key pressed*/
-    Chip8IO(uint8_t** display, uint8_t* keyboard, void (*func)(uint8_t key));
+    Chip8IO(uint8_t** display, uint8_t* keyboard, std::function<void(uint8_t)> func);
 
-    void (*func)(uint8_t key);
+    std::function<void(uint8_t)> func;
     uint8_t** display;
     uint8_t* keyboard;
 
