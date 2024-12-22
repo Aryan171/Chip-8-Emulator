@@ -4,6 +4,7 @@
 #include <random>
 #include <thread>
 #include <functional>
+#include <SFML/System.hpp>
 
 class Emulator {
 public:
@@ -30,7 +31,7 @@ public:
 	/*program counter and stack pointer registers
 	program counter is set to 512 as most chip 8
 	programs start at memory location 512 */
-	uint16_t PC = 512, SP = -1;
+	uint16_t PC = 512, SP = 0;
 
 	uint16_t* stack;
 
@@ -47,8 +48,10 @@ public:
 
 	int displayX = 64, displayY = 32;
 
-	Emulator();
+	Emulator(const uint8_t* program, int programLength);
+	~Emulator();
 	void startEmulator();
 	inline uint16_t getLastThreeNibbles(uint16_t instruction);
 	inline uint8_t getLastTwoNibbles(uint16_t instruction);
+	inline char toHex(uint16_t nibble);
 };

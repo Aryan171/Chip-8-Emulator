@@ -1,7 +1,18 @@
 #include "emulator.h"
 #include "chip8IO.h"
 
-Emulator::Emulator() {
+#define PRINT_INSTRUCTION
+#define PRINT_SPRITE
+/* when SLOW_EXECUTION is defined one instruction will be processed
+ only after a key (0-9 or a-f) is pressed*/
+//#define SLOW_EXECUTION
+/* when FAST_EXECUTION is defined there is minimum amount of delay
+ between the processing of two instructions*/
+//#define FAST_EXECUTION
+#define PRINT_REGISTERS
+
+
+Emulator::Emulator(const uint8_t* program, int programLength) {
 	// allocating 4kb of memory for the program to run
 	memory = new uint8_t[4096];
 
@@ -9,17 +20,55 @@ Emulator::Emulator() {
 		memory[i] = 0;
 	}
 
+	// loading the program in memory
+	for (int i = 0; i < programLength; ++i) {
+		memory[i + 512] = program[i];
+	}
+
 	// allocating memory for the V
 	V = new uint8_t[16];
+
+	for (int i = 0; i < 16; ++i) {
+		V[i] = 0;
+	}
 
 	// allocating memory for the display
 	display = new uint8_t*[displayX];
 
+	for (int i = 0; i < displayX; ++i) {
+		display[i] = new uint8_t[displayY];
+		for (int j = 0; j < displayY; ++j) {
+			display[i][j] = 0;
+		}
+	}
+
 	// allocating memory for the keyboard keys
 	keyboard = new uint8_t[16];
 
-	for (int i = 0; i < displayX; ++i) {
-		display[i] = new uint8_t[displayY];
+	for (int i = 0; i < 16; ++i) {
+		keyboard[i] = 0;
+	}
+
+	// storing the sprites of hexadecimal digits in memory
+	uint8_t digitSprites[] = { 0xF0, 0x90, 0x90, 0x90, 0xF0,
+	0x20, 0x60, 0x20, 0x20, 0x70,
+	0xF0, 0x10, 0xF0, 0x80, 0xF0,
+	0xF0, 0x10, 0xF0, 0x10, 0xF0,
+	0x90, 0x90, 0xF0, 0x10, 0x10,
+	0xF0, 0x80, 0xF0, 0x10, 0xF0,
+	0xF0, 0x80, 0xF0, 0x90, 0xF0,
+	0xF0, 0x10, 0x20, 0x40, 0x40,
+	0xF0, 0x90, 0xF0, 0x90, 0xF0,
+	0xF0, 0x90, 0xF0, 0x10, 0xF0,
+	0xF0, 0x90, 0xF0, 0x90, 0x90,
+	0xE0, 0x90, 0xE0, 0x90, 0xE0,
+	0xF0, 0x80, 0x80, 0x80, 0xF0,
+	0xE0, 0x90, 0x90, 0x90, 0xE0,
+	0xF0, 0x80, 0xF0, 0x80, 0xF0,
+	0xF0, 0x80, 0xF0, 0x80, 0x80 };
+
+	for (int i = 0; i < 80; ++i) {
+		memory[i] = digitSprites[i];
 	}
 
 	// allocating memory for the stack
@@ -41,7 +90,17 @@ void Emulator::startEmulator() {
 		io.startIO();
 	});
 
+	// timer used for delay timer and sound timer registers
+	sf::Clock timer;
+
+#ifdef PRINT_INSTRUCTION
+	std::cout << "Location | Instruction" << std::endl;
+#endif
+
 	while (true) {
+		// starting the timer
+		sf::Clock clock;
+
 		// forming the 16 bit instruction from two 8 bit numbers
 		uint16_t ins = (static_cast<uint16_t>(memory[PC]) << 8) | memory[PC + 1];
 
@@ -51,9 +110,18 @@ void Emulator::startEmulator() {
 			c = (ins & 0x00F0) >> 4,
 			d = ins & 0x000F;
 
-		std::cout << "Instruction : " << a << " " << b << " " << c << " " << d << 
-			"location : " << PC << std::endl;
+#ifdef PRINT_REGISTERS
+		std::cout << "V[0-F] = ";
+		for (int i = 0; i < 16; ++i) {
+			std::cout << static_cast<int>(V[i]) << ", ";
+		}
 
+		std::cout << "I = " << I << " S = " << SP << " PC = " << PC << std::endl;
+#endif
+
+#ifdef PRINT_INSTRUCTION
+		std::cout << PC << "|" << toHex(a) << toHex(b) << toHex(c) << toHex(d) << std::endl;
+#endif
 		switch (a) {
 		case hx0:
 			// 0nnn is ignored 
@@ -65,7 +133,7 @@ void Emulator::startEmulator() {
 						display[i][j] = 0;
 					}
 				}
-					
+
 				PC += 2;
 			}
 
@@ -74,13 +142,17 @@ void Emulator::startEmulator() {
 				PC = stack[SP];
 				SP--;
 			}
+			else {
+				std::cout << "^\n";
+				std::cout << "|Unknown OPCODE\n";
+			}
 
 			break;
 
 		case hx1:
 			// 1nnn - JP addr
-			PC = getLastThreeNibbles(ins);
 
+			PC = getLastThreeNibbles(ins);
 			break;
 
 		case hx2:
@@ -88,7 +160,7 @@ void Emulator::startEmulator() {
 			SP++;
 			stack[SP] = PC;
 
-			PC += 2;
+			PC = getLastThreeNibbles(ins);
 
 			break;
 
@@ -98,6 +170,9 @@ void Emulator::startEmulator() {
 				// we increment by 4 instead of 2 as one instruction is two 
 				// bytes long
 				PC += 4;
+			}
+			else {
+				PC += 2;
 			}
 
 			break;
@@ -109,15 +184,28 @@ void Emulator::startEmulator() {
 				// bytes long
 				PC += 4;
 			}
+			else {
+				PC += 2;
+			}
 
 			break;
 
 		case hx5:
 			// 5xy0 - SE Vx, Vy
-			if (d == hx0 && V[b] == V[c]) {
-				// we increment by 4 instead of 2 as one instruction is two 
-				// bytes long
-				PC += 4;
+			if (d == hx0) {
+				if (V[b] == V[c]) {
+					// we increment by 4 instead of 2 as one instruction is two 
+					// bytes long
+					PC += 4;
+				}
+				else {
+					PC += 2;
+				}
+			}
+			else {
+				std::cout << "^\n";
+				std::cout << "|Unknown OPCODE\n";
+				std::cout << "|--------------\n";
 			}
 
 			break;
@@ -167,8 +255,8 @@ void Emulator::startEmulator() {
 				}
 
 				V[b] = static_cast<uint8_t>(sum & 0x0000FFFF);
-			}
 				break;
+			}
 
 			case hx5:
 				if (V[b] >= V[c]) {
@@ -219,6 +307,11 @@ void Emulator::startEmulator() {
 				V[b] <<= 1;
 
 				break;
+			default:
+				std::cout << "^\n";
+				std::cout << "|Unknown OPCODE\n";
+				std::cout << "|--------------\n";
+				return;
 			}
 
 			PC += 2;
@@ -234,6 +327,11 @@ void Emulator::startEmulator() {
 				else {
 					PC += 2;
 				}
+			}
+			else {
+				std::cout << "^\n";
+				std::cout << "|Unknown OPCODE\n";
+				std::cout << "|--------------\n";
 			}
 
 			break;
@@ -256,7 +354,7 @@ void Emulator::startEmulator() {
 
 			std::random_device rd;
 			std::mt19937 gen(rd());
-			std::uniform_int_distribution<> distrib(0, 256);
+			std::uniform_int_distribution<> distrib(0, 255);
 
 			V[b] = getLastTwoNibbles(ins) & distrib(gen);
 
@@ -269,37 +367,64 @@ void Emulator::startEmulator() {
 			// Dxyn - DRW Vx, Vy, nibble
 
 			V[15] = 0;
-
+#ifdef PRINT_SPRITE
+			std::cout << "Drawing sprite at " << static_cast<int>(b) << ", " 
+				<< static_cast<int>(c) << std::endl;
+#endif
 			// looping through all the bytes that store the sprite
-			for (uint16_t i = I; i < I + d; ++i) {
+			for (uint16_t i = 0; i < d; ++i) {
+
+#ifdef PRINT_SPRITE
+				std::cout << toHex((static_cast<uint16_t>(memory[i + I]) & 0x00F0) >> 4) <<
+					toHex(static_cast<uint16_t>(memory[i + I]) & 0x000F) << std::endl;
+#endif
+
 				// temporary variable used to disylay the byte
-				uint8_t t = 0x01;
+				uint8_t t = 0x80;
 
 				// used to store the final state of the pixel
-				uint8_t a;
+				uint8_t f;
+
+				// used to store the original state of the pixel
+				uint8_t o;
 
 				// displaying one byte of the sprite
-				for (uint16_t b = 0; b < 8; ++i) {
-					if ((memory[i] & t) != 0) {
-						if (display[b][c] == 1) {
-							a = 0;
+				for (uint16_t j = 0; j < 8; ++j) {
+					int x = (b + j) % displayX, y = (c + i) % displayY;
+					o = display[x][y];
+					if ((memory[i + I] & t) != 0) {
+						if (o == 1) {
+							f = 0;
 							V[15] = 1;
 						}
 						else {
-							a = 1;
+							f = 1;
 						}
 					}
 					else {
-						if (display[b][c] == 1) {
-							a = 1;
+						if (o == 1) {
+							f = 1;
 						}
 						else {
-							a = 0;
+							f = 0;
 						}
 					}
-					t << 1;
-					display[b % displayX][c % displayY] = a;
+
+					// setting the bit on or off according to a
+					display[x][y] = f;
+#ifdef PRINT_SPRITE
+					if (f == 1) {
+						std::cout << "& ";
+					}
+					else {
+						std::cout << ". ";
+					}
+#endif
+					t >>= 1;
 				}
+#ifdef PRINT_SPRITE
+				std::cout << std::endl;
+#endif
 			}
 
 			PC += 2;
@@ -315,7 +440,12 @@ void Emulator::startEmulator() {
 			else if (c == hxA && d == hx1 && keyboard[V[b]] == 0) {
 				PC += 4;
 			}
-
+			else {
+				std::cout << "^\n";
+				std::cout << "|Unknown OPCODE\n";
+				std::cout << "|--------------\n";
+				return;
+			}
 			break;
 
 		case hxF:
@@ -369,9 +499,55 @@ void Emulator::startEmulator() {
 					V[i] = memory[I + i];
 				}
 				break;
+
+			default:
+				std::cout << "^\n";
+				std::cout << "|Unknown OPCODE\n";
+				std::cout << "|--------------\n";
+				return;
 			}
 			PC += 2;
 		}
+
+#ifndef FAST_EXECUTION
+		while (clock.getElapsedTime().asMicroseconds() < 10000) {}
+#endif
+		if (timer.getElapsedTime().asMicroseconds() > 16667) {
+			if (ST > 0) {
+				ST--;
+			}
+			if (DT > 0) {
+				DT--;
+			}
+
+			timer.restart();
+		}
+
+#ifdef SLOW_EXECUTION
+		newKeyPressed = false;
+		while (!newKeyPressed) {}
+#endif
+	}
+}
+
+Emulator::~Emulator() {
+	delete[] stack;
+	delete[] keyboard;
+
+	for (int i = 0; i < displayX; ++i) {
+		delete[] display[i];
+	}
+	delete[] display;
+	delete[] memory;
+	delete[] V;
+}
+
+inline char Emulator::toHex(uint16_t nibble) {
+	if (nibble < 0x000A) {
+		return static_cast<char>(nibble) + '0';
+	}
+	else {
+		return static_cast<char>(nibble) + 'A' - 10;
 	}
 }
 
