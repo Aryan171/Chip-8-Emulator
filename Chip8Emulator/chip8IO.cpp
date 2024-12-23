@@ -1,7 +1,7 @@
 #include "chip8IO.h"
     
-Chip8IO::Chip8IO(uint8_t ** display, uint8_t* keyboard, std::function<void(uint8_t)> func) :
-        display(display), keyboard(keyboard), func(func) {}
+Chip8IO::Chip8IO(uint8_t ** display, uint8_t* keyboard, uint8_t& soundTimer, std::function<void(uint8_t)> func) :
+        display(display), keyboard(keyboard), func(func), soundTimer(soundTimer) {}
 
 std::function<void(uint8_t)> func;
 
@@ -44,6 +44,15 @@ int Chip8IO::mapKeyCodes(sf::Keyboard::Key key) {
 }
 
 void Chip8IO::startIO() {
+    sf::SoundBuffer soundBuffer;
+    if (!soundBuffer.loadFromFile("beep.wav")) {
+        std::cout << "Failed to load sound" << std::endl;
+    }
+
+    sf::Sound sound;
+    sound.setBuffer(soundBuffer);
+    sound.setLoop(true);
+
     sf::RenderWindow window(sf::VideoMode(1000, 500), "CHIP-8");
 
     sf::RectangleShape rectangle;
@@ -51,6 +60,13 @@ void Chip8IO::startIO() {
 
     while (window.isOpen()) {
         sf::Event event;
+
+        if (soundTimer != 0) {
+            sound.play();
+        }
+        else {
+            sound.pause();
+        }
 
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {

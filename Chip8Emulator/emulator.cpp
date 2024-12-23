@@ -8,7 +8,7 @@
 //#define SLOW_EXECUTION
 /* when FAST_EXECUTION is defined there is minimum amount of delay
  between the processing of two instructions*/
-#define FAST_EXECUTION
+//#define FAST_EXECUTION
 //#define PRINT_REGISTERS
 
 
@@ -84,8 +84,9 @@ void Emulator::startEmulator() {
 		newKeyCode = key;
 		};
 
-	Chip8IO io(display, keyboard, func);
+	Chip8IO io(display, keyboard, ST, func);
 
+	// handeling all the IO operations in a separate thread
 	std::thread ioThread([&]() {
 		io.startIO();
 	});
@@ -437,11 +438,21 @@ void Emulator::startEmulator() {
 		case hxE:
 			// Ex9E - SKP Vx
 
-			if (c == hx9 && d == hxE && keyboard[V[b]] == 1) {
-				PC += 4;
+			if (c == hx9 && d == hxE) {
+				if (keyboard[V[b]] == 1) {
+					PC += 4;
+				}
+				else {
+					PC += 2;
+				}
 			}
-			else if (c == hxA && d == hx1 && keyboard[V[b]] == 0) {
-				PC += 4;
+			else if (c == hxA && d == hx1) {
+				if (keyboard[V[b]] != 1) {
+					PC += 4;
+				}
+				else {
+					PC += 2;
+				}
 			}
 			else {
 				std::cout << "^\n";

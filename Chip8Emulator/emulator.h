@@ -37,7 +37,7 @@ public:
 
 	/*delay time register and sound time register,
 	both these registers are decremented at 60Hz*/
-	uint16_t DT = 0, ST = 0;
+	uint8_t DT = 0, ST = 0;
 
 	uint16_t I = 0;
 

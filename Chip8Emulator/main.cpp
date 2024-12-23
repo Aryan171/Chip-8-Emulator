@@ -45,14 +45,14 @@ inline char toHex(uint8_t nibble) {
 }
 
 int main(int argc, char* argv[]) {
-    /*
+    
 	if (argc < 2) {
 		std::cerr << "file path not provided. Please drag a CHIP-8 " <<
 			"program onto the.exe file of the emulator" << std::endl;
 		return 1;
-	}*/
+	}
 
-    std::string path = "C:\\Users\\aryan\\Downloads\\pumpkindressup.ch8";//argv[1];
+    std::string path = argv[1];
 	uint8_t* program = nullptr;
 
     int programSize = loadIntoMemory(path, program);
