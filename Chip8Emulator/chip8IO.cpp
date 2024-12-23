@@ -8,11 +8,29 @@ std::function<void(uint8_t)> func;
 uint8_t** display;
 uint8_t* keyboard;
     
+
+/*
++-------+
+|1|2|3|4|
+|q|w|e|r|
+|a|s|d|f|
+|z|x|c|v|
++-------+
+
+is mapped to 
+
++-------+
+|1|2|3|c|
+|4|5|6|d|
+|7|8|9|e|
+|a|0|b|f|
++-------+
+*/
 std::unordered_map<sf::Keyboard::Key, int> keyMap = {
-    {sf::Keyboard::Num0, 0}, {sf::Keyboard::Num1, 1}, {sf::Keyboard::Num2, 2}, {sf::Keyboard::Num3, 3},
-    {sf::Keyboard::Num4, 4}, {sf::Keyboard::Num5, 5}, {sf::Keyboard::Num6, 6}, {sf::Keyboard::Num7, 7},
-    {sf::Keyboard::Num8, 8}, {sf::Keyboard::Num9, 9}, {sf::Keyboard::A, 10}, {sf::Keyboard::B, 11},
-    {sf::Keyboard::C, 12}, {sf::Keyboard::D, 13}, {sf::Keyboard::E, 14}, {sf::Keyboard::F, 15}
+    {sf::Keyboard::Num1, 1}, {sf::Keyboard::Num2, 2}, {sf::Keyboard::Num3, 3}, {sf::Keyboard::Num4, 12},
+    {sf::Keyboard::Q, 4}, {sf::Keyboard::W, 5}, {sf::Keyboard::E, 6}, {sf::Keyboard::R, 13},
+    {sf::Keyboard::A, 7}, {sf::Keyboard::S, 8}, {sf::Keyboard::D, 9}, {sf::Keyboard::F, 14 },
+    {sf::Keyboard::Z, 10}, {sf::Keyboard::X, 0}, {sf::Keyboard::C, 11}, {sf::Keyboard::V, 15},
 };
 
 int Chip8IO::mapKeyCodes(sf::Keyboard::Key key) {

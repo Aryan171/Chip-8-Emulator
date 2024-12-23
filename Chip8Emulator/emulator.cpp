@@ -1,15 +1,15 @@
 #include "emulator.h"
 #include "chip8IO.h"
 
-#define PRINT_INSTRUCTION
-#define PRINT_SPRITE
+//#define PRINT_INSTRUCTION
+//#define PRINT_SPRITE
 /* when SLOW_EXECUTION is defined one instruction will be processed
  only after a key (0-9 or a-f) is pressed*/
 //#define SLOW_EXECUTION
 /* when FAST_EXECUTION is defined there is minimum amount of delay
  between the processing of two instructions*/
-//#define FAST_EXECUTION
-#define PRINT_REGISTERS
+#define FAST_EXECUTION
+//#define PRINT_REGISTERS
 
 
 Emulator::Emulator(const uint8_t* program, int programLength) {
@@ -116,7 +116,8 @@ void Emulator::startEmulator() {
 			std::cout << static_cast<int>(V[i]) << ", ";
 		}
 
-		std::cout << "I = " << I << " S = " << SP << " PC = " << PC << std::endl;
+		std::cout << "\nI = " << I << " S = " << SP << " PC = " << PC
+			<< " DT = " << DT << " ST = " << ST << std::endl;
 #endif
 
 #ifdef PRINT_INSTRUCTION
@@ -140,6 +141,8 @@ void Emulator::startEmulator() {
 			// 00EE - RET
 			else if (b == hx0 && c == hxE && d == hxE) {
 				PC = stack[SP];
+				// 2 is added to the program counter so as not to call again
+				PC += 2;
 				SP--;
 			}
 			else {
@@ -247,14 +250,14 @@ void Emulator::startEmulator() {
 			case hx4: {
 				uint16_t sum = static_cast<uint16_t>(V[b]) + static_cast<uint16_t>(V[c]);
 
-				if ((sum & 0xFFFF0000) == 0) {
+				if ((sum & 0xFF00) == 0) {
 					V[15] = 0;
 				}
 				else {
 					V[15] = 1;
 				}
 
-				V[b] = static_cast<uint8_t>(sum & 0x0000FFFF);
+				V[b] = static_cast<uint8_t>(sum & 0x00FF);
 				break;
 			}
 
@@ -271,7 +274,7 @@ void Emulator::startEmulator() {
 				break;
 
 			case hx6:
-				if ((V[b] & 0x0001) == 1) {
+				if ((V[b] & 0x01) == 1) {
 					V[15] = 1;
 				}
 				else {
@@ -296,7 +299,7 @@ void Emulator::startEmulator() {
 				break;
 
 			case hxE:
-				if ((V[b] & 0x0001) == 1) {
+				if ((V[b] & 0x80) != 0) {
 					V[15] = 1;
 				}
 				else {
@@ -368,8 +371,8 @@ void Emulator::startEmulator() {
 
 			V[15] = 0;
 #ifdef PRINT_SPRITE
-			std::cout << "Drawing sprite at " << static_cast<int>(b) << ", " 
-				<< static_cast<int>(c) << std::endl;
+			std::cout << "Drawing sprite at " << static_cast<int>(V[b]) << ", " 
+				<< static_cast<int>(V[c]) << std::endl;
 #endif
 			// looping through all the bytes that store the sprite
 			for (uint16_t i = 0; i < d; ++i) {
@@ -390,7 +393,7 @@ void Emulator::startEmulator() {
 
 				// displaying one byte of the sprite
 				for (uint16_t j = 0; j < 8; ++j) {
-					int x = (b + j) % displayX, y = (c + i) % displayY;
+					int x = (V[b] + j) % displayX, y = (V[c] + i) % displayY;
 					o = display[x][y];
 					if ((memory[i + I] & t) != 0) {
 						if (o == 1) {
